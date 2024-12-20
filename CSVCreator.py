@@ -5,8 +5,8 @@ import zipfile
 # Create a directory to hold the CSV files
 os.makedirs("csvfiles", exist_ok=True)
 
-# Generate 200 small CSV files
-for i in range(200):
+# Generate 1000 small CSV files
+for i in range(1000):
     filename = f"csvfiles/file_{i+1}.csv"
     with open(filename, 'w', newline='') as f:
         writer = csv.writer(f)
