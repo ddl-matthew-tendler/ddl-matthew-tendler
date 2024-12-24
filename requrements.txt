@@ -1,0 +1,8 @@
+streamlit
+google-cloud-storage
+pandas
+numpy
+  
+
+
+
