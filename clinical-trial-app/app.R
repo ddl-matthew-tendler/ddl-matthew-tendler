@@ -1,10 +1,13 @@
-# A minimal Shiny app simulating clinical trial data with query parameter support
+# A Shiny app with URL-based navigation for specific drugs
 library(shiny)
 
 ui <- fluidPage(
-  titlePanel("Simple Clinical Trial App"),
+  titlePanel("Drug-Specific Clinical Trial App"),
   sidebarLayout(
     sidebarPanel(
+      selectInput("drug", "Select Drug:",
+                  choices = c("a", "b", "c", "d"),
+                  selected = "a"),
       sliderInput("sampleSize", "Sample Size", 
                   min = 10, max = 200, value = 50),
       numericInput("meanValue", "Mean (µ):", 0),
@@ -24,6 +27,9 @@ server <- function(input, output, session) {
   observe({
     query <- parseQueryString(session$clientData$url_search)
     
+    if (!is.null(query$drug)) {
+      updateSelectInput(session, "drug", selected = query$drug)
+    }
     if (!is.null(query$sampleSize)) {
       updateSliderInput(session, "sampleSize", value = as.numeric(query$sampleSize))
     }
@@ -35,6 +41,11 @@ server <- function(input, output, session) {
     }
   })
   
+  # Update the URL when the drug selection changes
+  observeEvent(input$drug, {
+    updateQueryString(paste0("?drug=", input$drug), mode = "push")
+  })
+  
   # Reactive expression to simulate data based on user input
   simulatedData <- reactive({
     rnorm(input$sampleSize, mean = input$meanValue, sd = input$sdValue)
@@ -43,7 +54,7 @@ server <- function(input, output, session) {
   # Render plot
   output$distPlot <- renderPlot({
     hist(simulatedData(),
-         main = "Distribution of Simulated Trial Data",
+         main = paste("Distribution for Drug:", input$drug),
          xlab = "Simulated Values",
          col = "steelblue",
          border = "white")
