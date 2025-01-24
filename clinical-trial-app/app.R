@@ -1,4 +1,4 @@
-# A minimal Shiny app simulating clinical trial data
+# A minimal Shiny app simulating clinical trial data with query parameter support
 library(shiny)
 
 ui <- fluidPage(
@@ -20,6 +20,21 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
+  # Handle query parameters
+  observe({
+    query <- parseQueryString(session$clientData$url_search)
+    
+    if (!is.null(query$sampleSize)) {
+      updateSliderInput(session, "sampleSize", value = as.numeric(query$sampleSize))
+    }
+    if (!is.null(query$meanValue)) {
+      updateNumericInput(session, "meanValue", value = as.numeric(query$meanValue))
+    }
+    if (!is.null(query$sdValue)) {
+      updateNumericInput(session, "sdValue", value = as.numeric(query$sdValue))
+    }
+  })
+  
   # Reactive expression to simulate data based on user input
   simulatedData <- reactive({
     rnorm(input$sampleSize, mean = input$meanValue, sd = input$sdValue)
