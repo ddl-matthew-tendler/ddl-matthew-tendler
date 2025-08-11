@@ -1,0 +1,8 @@
+You’re helping maintain a Streamlit app called “Governance Explorer”.
+- Entry: src/app.py
+- HTTP goes only in src/api.py
+- Data-only helpers in src/transforms.py
+- UI tabs live in src/ui/*
+- Config/env logic in src/config.py
+- OFFLINE=true reads fixtures from ./data
+Keep functions small and pure.
