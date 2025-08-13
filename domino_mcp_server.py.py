@@ -1,5 +1,5 @@
 """
-Domino MCP Server extended with helper functions for building Streamlit apps
+This Domino MCP Server extended with helper functions for building Streamlit apps
 This file is based on the original domino_mcp_server repository.
 It defines additional tool functions to list Domino compute environments and hardware tiers,
 and to scaffold a basic Streamlit app within a Domino project.
