@@ -1,0 +1,2 @@
+DOMINO_API_KEY=781489d88978df9ee3dbca6b216fa766fbf7ead88a5b3f513f9ddba2a22964b4
+DOMINO_HOST=https://govqcexploratory.domino.tech
