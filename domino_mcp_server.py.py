@@ -181,3 +181,128 @@ def open_web_browser(url: str) -> bool:
         return False
 # Initialize the Fast MCP server
 mcp = FastMCP("domino_server")
+
+# -------------------------------------------------------------------------
+# Additional helper functions for Streamlit app development on Domino
+# -------------------------------------------------------------------------
+
+@mcp.tool()
+async def list_compute_environments() -> Dict[str, Any]:
+    """
+    List compute environments visible to the authenticated Domino user.
+
+    This function calls the Domino beta API endpoint to retrieve the environments
+    that a user can see. Each environment is returned with its id and name.
+    """
+    api_url = f"{domino_host}/api/environments/beta/environments?offset=0&limit=100"
+    headers = {"X-Domino-Api-Key": domino_api_key}
+    try:
+        response = requests.get(api_url, headers=headers)
+        response.raise_for_status()
+        envs = response.json()
+        environment_list: List[Dict[str, str]] = []
+        for env in envs:
+            env_id = env.get("id")
+            env_name = env.get("name") or env.get("title") or env.get("environmentName")
+            environment_list.append({"id": env_id, "name": env_name})
+        return {"environments": environment_list}
+    except requests.exceptions.RequestException as e:
+        return {"error": f"API request failed: {e}"}
+    except Exception as e:
+        return {"error": f"An unexpected error occurred: {e}"}
+
+@mcp.tool()
+async def list_hardware_tiers(include_archived: bool = False) -> Dict[str, Any]:
+    """
+    List hardware tiers available on the Domino deployment.
+
+    The Domino API exposes hardware tiers via `/api/hardwaretiers/v1/hardwaretiers`.
+    This function fetches up to 100 tiers by default and returns id and name.
+
+    Args:
+        include_archived (bool): Whether to include archived hardware tiers. Default False.
+    """
+    include = "true" if include_archived else "false"
+    api_url = f"{domino_host}/api/hardwaretiers/v1/hardwaretiers?offset=0&limit=100&includeArchived={include}"
+    headers = {"X-Domino-Api-Key": domino_api_key}
+    try:
+        response = requests.get(api_url, headers=headers)
+        response.raise_for_status()
+        tiers = response.json()
+        hardware_list: List[Dict[str, str]] = []
+        for tier in tiers:
+            tier_id = tier.get("id")
+            tier_name = tier.get("hardwareTierName") or tier.get("name") or tier.get("displayName")
+            hardware_list.append({"id": tier_id, "name": tier_name})
+        return {"hardware_tiers": hardware_list}
+    except requests.exceptions.RequestException as e:
+        return {"error": f"API request failed: {e}"}
+    except Exception as e:
+        return {"error": f"An unexpected error occurred: {e}"}
+
+@mcp.tool()
+async def scaffold_streamlit_app(app_name: str) -> Dict[str, Any]:
+    """
+    Create a basic Streamlit app scaffold (app.py and app.sh) in the project root.
+
+    The generated `app.py` contains a simple form that prompts users to specify
+    the name and description for a new Domino app, choose an environment and hardware tier,
+    and optionally publish the app using Domino's python-domino SDK.  The `app.sh`
+    script runs the Streamlit application on Domino's required port and address.
+
+    Args:
+        app_name (str): The name of the Streamlit app to scaffold.
+
+    Returns:
+        Dict[str, Any]: A summary of the created files or an error message.
+    """
+    try:
+        # Sanitize app name for filenames (replace spaces with underscores)
+        safe_name = re.sub(r"\s+", "_", app_name.strip())
+        app_py_path = f"{safe_name}.py"
+        app_sh_path = f"{safe_name}.sh"
+        # Define the contents of app.py
+        app_py_contents = f"""import streamlit as st
+from domino import Domino
+
+st.title('Domino Streamlit App Creator')
+st.write('This app helps you scaffold and publish new Domino apps.')
+
+st.header('App Details')
+new_app_name = st.text_input('New app name', value='')
+new_app_description = st.text_area('Description', value='')
+
+st.header('Execution Settings')
+env_id = st.text_input('Environment ID')
+hardware_tier_id = st.text_input('Hardware Tier ID')
+
+if st.button('Publish'):
+    if not new_app_name or not env_id or not hardware_tier_id:
+        st.error('Please provide app name, environment ID and hardware tier ID.')
+    else:
+        # Create a Domino client using credentials available in the Domino workspace
+        domino = Domino('{app_name}', api_key=None, host=None)
+        try:
+            domino.app_publish(hardwareTierId=hardware_tier_id)
+            st.success('Published app ' + new_app_name)
+        except Exception as e:
+            st.error(f'Failed to publish: {{e}}')
+"""
+        # Define contents of app.sh
+        app_sh_contents = f"""#!/bin/bash
+streamlit run {app_py_path} --server.port=8888 --server.address=0.0.0.0
+"""
+        # Write files to the current working directory
+        with open(app_py_path, "w", encoding="utf-8") as f_py:
+            f_py.write(app_py_contents)
+        with open(app_sh_path, "w", encoding="utf-8") as f_sh:
+            f_sh.write(app_sh_contents)
+        # Make the shell script executable
+        os.chmod(app_sh_path, 0o755)
+        return {"created_files": [app_py_path, app_sh_path]}
+    except Exception as e:
+        return {"error": f"Failed to scaffold Streamlit app: {e}"}
+
+if __name__ == "__main__":
+    # Start the MCP server when run from the command line.
+    mcp.run(transport="stdio")
